@@ -1,0 +1,27 @@
+name: Publish package to npmjs
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+jobs:
+  npmrelease:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2.0.2
+        with:
+          deno-version: v2.1.6
+
+      - run: deno task check
+      - run: deno task bundle
+
+      # Setup .npmrc file to publish to npm
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
