@@ -12,7 +12,7 @@ jobs:
       - name: Setup Deno
         uses: denoland/setup-deno@v2.0.2
         with:
-          deno-version: v2.1.6
+          deno-version: v2.6.4
 
       - run: deno task check
       - run: deno task bundle
