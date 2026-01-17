@@ -68,6 +68,13 @@ export function viversePlugin({
 				[props.cookieDomain]: cookieDomain,
 			});
 
+			// If we're not running in an iframe, the client.checkAuth() promise stays pending forever.
+			// But since it is pretty common to run games in local development without an iframe, we'll also make this check here and throw an error.
+			// That way at least some of the api calls stay working.
+			if (window.parent == window) {
+				throw new Error("The Viverse SDK is not supported unless the game is embedded on the viverse.com.");
+			}
+
 			const authResult = await client[props.checkAuth]();
 			accessToken = authResult?.access_token || null;
 
