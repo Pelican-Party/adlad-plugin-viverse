@@ -92,7 +92,11 @@ export function viversePlugin({
 				// This does mean the SDK will probably stringify it a second time, but oh well.
 				const stringifiedValue = JSON.stringify(value);
 				if (accessToken) {
-					await cloudSaveClient[props.setPlayerData](key, stringifiedValue, accessToken);
+					// If you give the viverse sdk a json string as input, the sdk will try to parse it.
+					// This is rather unexpected however, because if a develoepr calls `setStorageItem("foo", "42")`,
+					// they expect to get exactly `"42"` back when calling `getStorageItem("foo")`.
+					// So in order to prevent the sdk from parsing our strings, we'll just provide an object.
+					await cloudSaveClient[props.setPlayerData](key, { s: stringifiedValue }, accessToken);
 				} else {
 					try {
 						localStorage.setItem(localStoragePrefix + key, stringifiedValue);
@@ -109,7 +113,13 @@ export function viversePlugin({
 			async getStorageItem(key) {
 				let stringifiedValue;
 				if (accessToken) {
-					stringifiedValue = await cloudSaveClient[props.getPlayerData](key, accessToken);
+					const objectifiedValue =
+						/** @type {{s: string}} */ (await cloudSaveClient[props.getPlayerData](key, accessToken));
+					if (typeof objectifiedValue == "object" && objectifiedValue != null) {
+						stringifiedValue = objectifiedValue.s;
+					} else {
+						stringifiedValue = null;
+					}
 				} else {
 					try {
 						stringifiedValue = localStorage.getItem(localStoragePrefix + key);
