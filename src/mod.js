@@ -98,6 +98,9 @@ export function viversePlugin({
 					// So in order to prevent the sdk from parsing our strings, we'll just provide an object.
 					await cloudSaveClient[props.setPlayerData](key, { s: stringifiedValue }, accessToken);
 				} else {
+					// Calls to the viverse sdk normally do not resolve instantly, which might cause bugs in the application.
+					// Let's simulate this behavior so it's easier to reproduce these issues in local development.
+					await new Promise((resolve) => setTimeout(resolve, 1000));
 					try {
 						localStorage.setItem(localStoragePrefix + key, stringifiedValue);
 					} catch {
@@ -121,6 +124,9 @@ export function viversePlugin({
 						stringifiedValue = null;
 					}
 				} else {
+					// Calls to the viverse sdk normally do not resolve instantly, which might cause bugs in the application.
+					// Let's simulate this behavior so it's easier to reproduce these issues in local development.
+					await new Promise((resolve) => setTimeout(resolve, 1000));
 					try {
 						stringifiedValue = localStorage.getItem(localStoragePrefix + key);
 					} catch {
