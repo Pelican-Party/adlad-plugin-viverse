@@ -1,15 +1,9 @@
 /**
  * @param {Object} options
  * @param {string} options.appId
- * @param {string | undefined} [options.domain]
- * @param {string | undefined} [options.baseURL]
- * @param {string | undefined} [options.cookieDomain]
  */
 export function viversePlugin({
 	appId,
-	domain = "account.htcvive.com",
-	baseURL = "https://sdk-api.viverse.com/",
-	cookieDomain = undefined,
 }) {
 	let initializeCalled = false;
 
@@ -58,7 +52,7 @@ export function viversePlugin({
 		if (!accessToken) return null;
 		if (!avatarClient) {
 			avatarClient = new viverse[props.avatar]({
-				[props.baseURL]: baseURL,
+				[props.baseURL]: "https://sdk-api.viverse.com/",
 				[props.token]: accessToken,
 			});
 		}
@@ -83,8 +77,8 @@ export function viversePlugin({
 
 			client = new globalThis[props.viverse][props.client]({
 				[props.clientId]: appId,
-				[props.domain]: domain,
-				[props.cookieDomain]: cookieDomain,
+				[props.domain]: "account.htcvive.com",
+				[props.cookieDomain]: window.location.hostname,
 			});
 
 			// If we're not running in an iframe, the client.checkAuth() promise stays pending forever.
