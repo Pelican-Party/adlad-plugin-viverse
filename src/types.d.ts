@@ -1,3 +1,5 @@
+import type { ViverseProfile } from "./mod.js";
+
 declare global {
 	var viverse: {
 		client: typeof ViverseClient;
@@ -42,22 +44,7 @@ interface ViverseAvatarClientOptions {
 
 export class ViverseAvatarClient {
 	constructor(options: ViverseAvatarClientOptions);
-	getProfile(): Promise<ViverseAvatar>;
+	getProfile(): Promise<ViverseProfile>;
 }
-
-type ViverseProfile = {
-	name: string;
-	activeAvatar: ViverseAvatar | null;
-};
-
-type ViverseAvatar = {
-	id: string | number;
-	isPrivate: boolean;
-	vrmUrl: string;
-	headIconUrl: string;
-	snapshot: string;
-	createTime: number;
-	updateTime: number;
-};
 
 export {};

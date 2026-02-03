@@ -1,4 +1,21 @@
 /**
+ * @typedef ViverseProfile
+ * @property {string} name
+ * @property {ViverseAvatar | null} activeAvatar
+ */
+
+/**
+ * @typedef ViverseAvatar
+ * @property {string | number} id
+ * @property {boolean} isPrivate
+ * @property {string} vrmUrl
+ * @property {string} headIconUrl
+ * @property {string} snapshot
+ * @property {number} createTime
+ * @property {number} updateTime
+ */
+
+/**
  * @param {Object} options
  * @param {string} options.appId
  */
@@ -155,6 +172,9 @@ export function viversePlugin({
 			getIsSignedIn() {
 				return Boolean(accessToken);
 			},
+			/**
+			 * @returns {Promise<ViverseProfile?>}
+			 */
 			async getProfile() {
 				const client = getAvatarClient();
 				if (!client) return null;
