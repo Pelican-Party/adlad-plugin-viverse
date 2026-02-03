@@ -2,11 +2,13 @@
  * @param {Object} options
  * @param {string} options.appId
  * @param {string | undefined} [options.domain]
+ * @param {string | undefined} [options.baseURL]
  * @param {string | undefined} [options.cookieDomain]
  */
 export function viversePlugin({
 	appId,
 	domain = "account.htcvive.com",
+	baseURL = "https://sdk-api.viverse.com/",
 	cookieDomain = undefined,
 }) {
 	let initializeCalled = false;
@@ -27,6 +29,9 @@ export function viversePlugin({
 		newCloudSaveClient: "newCloudSaveClient",
 		setPlayerData: "setPlayerData",
 		getPlayerData: "getPlayerData",
+		avatar: "avatar",
+		baseURL: "baseURL",
+		token: "token",
 	});
 
 	// @ts-ignore We want to make sure that `props` remains an object.
@@ -45,6 +50,20 @@ export function viversePlugin({
 	let cloudSaveClient;
 	/** @type {string?} */
 	let accessToken = null;
+
+	/** @type {import("./types.d.ts").ViverseAvatarClient?} */
+	let avatarClient = null;
+
+	function getAvatarClient() {
+		if (!accessToken) return null;
+		if (!avatarClient) {
+			avatarClient = new viverse[props.avatar]({
+				[props.baseURL]: baseURL,
+				[props.token]: accessToken,
+			});
+		}
+		return avatarClient;
+	}
 
 	/** @type {Map<string, string>} */
 	const sessionStorage = new Map();
@@ -138,6 +157,14 @@ export function viversePlugin({
 			},
 			showAuthPrompt() {
 				client[props.loginWithWorlds]();
+			},
+			getIsSignedIn() {
+				return Boolean(accessToken);
+			},
+			async getProfile() {
+				const client = getAvatarClient();
+				if (!client) return null;
+				return await client.getProfile();
 			},
 		},
 	});

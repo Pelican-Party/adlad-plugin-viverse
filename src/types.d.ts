@@ -2,6 +2,7 @@ declare global {
 	var viverse: {
 		client: typeof ViverseClient;
 		storage: typeof ViverseStorage;
+		avatar: typeof ViverseAvatarClient;
 	};
 }
 
@@ -33,5 +34,30 @@ export class CloudSaveClient {
 	setPlayerData(key: string, value: unknown, accessToken: string): Promise<void>;
 	getPlayerData(key: string, accessToken: string): Promise<unknown>;
 }
+
+interface ViverseAvatarClientOptions {
+	baseURL: string;
+	token: string;
+}
+
+export class ViverseAvatarClient {
+	constructor(options: ViverseAvatarClientOptions);
+	getProfile(): Promise<ViverseAvatar>;
+}
+
+type ViverseProfile = {
+	name: string;
+	activeAvatar: ViverseAvatar | null;
+};
+
+type ViverseAvatar = {
+	id: string | number;
+	isPrivate: boolean;
+	vrmUrl: string;
+	headIconUrl: string;
+	snapshot: string;
+	createTime: number;
+	updateTime: number;
+};
 
 export {};
