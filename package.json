@@ -2,7 +2,12 @@
 	"name": "@adlad/plugin-viverse",
 	"version": "0.7.0",
 	"description": "AdLad plugin for the Viverse sdk.",
+	"type": "module",
 	"main": "mod.js",
+	"exports": {
+		".": "./mod.js",
+		"./iframeBridge": "./iframeBridge.js"
+	},
 	"types": "dist/adlad-plugin-viverse.d.ts",
 	"repository": {
 		"type": "git",
