@@ -185,3 +185,5 @@ export function viversePlugin({
 
 	return plugin;
 }
+
+export default viversePlugin;
