@@ -111,61 +111,53 @@ export function viversePlugin({
 			const storageClient = new globalThis[props.viverse][props.storage]();
 			cloudSaveClient = await storageClient[props.newCloudSaveClient](appId);
 		},
+		async setStorageItem(key, value) {
+			// The Viverse SDK doesn't allow passing raw values such as `true` or `42`,
+			// but since this is quite common, we'll add support for this by stringifying the provided value.
+			// This does mean the SDK will probably stringify it a second time, but oh well.
+			const stringifiedValue = JSON.stringify(value);
+			if (accessToken) {
+				// If you give the viverse sdk a json string as input, the sdk will try to parse it.
+				// This is rather unexpected however, because if a develoepr calls `setStorageItem("foo", "42")`,
+				// they expect to get exactly `"42"` back when calling `getStorageItem("foo")`.
+				// So in order to prevent the sdk from parsing our strings, we'll just provide an object.
+				await cloudSaveClient[props.setPlayerData](key, { s: stringifiedValue }, accessToken);
+			} else {
+				// Calls to the viverse sdk normally do not resolve instantly, which might cause bugs in the application.
+				// Let's simulate this behavior so it's easier to reproduce these issues in local development.
+				await new Promise((resolve) => setTimeout(resolve, 1000));
+				try {
+					localStorage.setItem(localStoragePrefix + key, stringifiedValue);
+				} catch {
+					// The user is probably using private browsing, we'll fallback to session storage
+					sessionStorage.set(key, stringifiedValue);
+				}
+			}
+		},
+		async getStorageItem(key) {
+			let stringifiedValue;
+			if (accessToken) {
+				const objectifiedValue =
+					/** @type {{s: string}} */ (await cloudSaveClient[props.getPlayerData](key, accessToken));
+				if (typeof objectifiedValue == "object" && objectifiedValue != null) {
+					stringifiedValue = objectifiedValue.s;
+				} else {
+					stringifiedValue = null;
+				}
+			} else {
+				// Calls to the viverse sdk normally do not resolve instantly, which might cause bugs in the application.
+				// Let's simulate this behavior so it's easier to reproduce these issues in local development.
+				await new Promise((resolve) => setTimeout(resolve, 1000));
+				try {
+					stringifiedValue = localStorage.getItem(localStoragePrefix + key);
+				} catch {
+					stringifiedValue = sessionStorage.get(key);
+				}
+			}
+			if (!stringifiedValue || typeof stringifiedValue != "string") return null;
+			return JSON.parse(stringifiedValue);
+		},
 		customRequests: {
-			/**
-			 * @param {string} key
-			 * @param {unknown} value
-			 */
-			async setStorageItem(key, value) {
-				// The Viverse SDK doesn't allow passing raw values such as `true` or `42`,
-				// but since this is quite common, we'll add support for this by stringifying the provided value.
-				// This does mean the SDK will probably stringify it a second time, but oh well.
-				const stringifiedValue = JSON.stringify(value);
-				if (accessToken) {
-					// If you give the viverse sdk a json string as input, the sdk will try to parse it.
-					// This is rather unexpected however, because if a develoepr calls `setStorageItem("foo", "42")`,
-					// they expect to get exactly `"42"` back when calling `getStorageItem("foo")`.
-					// So in order to prevent the sdk from parsing our strings, we'll just provide an object.
-					await cloudSaveClient[props.setPlayerData](key, { s: stringifiedValue }, accessToken);
-				} else {
-					// Calls to the viverse sdk normally do not resolve instantly, which might cause bugs in the application.
-					// Let's simulate this behavior so it's easier to reproduce these issues in local development.
-					await new Promise((resolve) => setTimeout(resolve, 1000));
-					try {
-						localStorage.setItem(localStoragePrefix + key, stringifiedValue);
-					} catch {
-						// The user is probably using private browsing, we'll fallback to session storage
-						sessionStorage.set(key, stringifiedValue);
-					}
-				}
-			},
-			/**
-			 * @param {string} key
-			 * @returns {Promise<unknown>}
-			 */
-			async getStorageItem(key) {
-				let stringifiedValue;
-				if (accessToken) {
-					const objectifiedValue =
-						/** @type {{s: string}} */ (await cloudSaveClient[props.getPlayerData](key, accessToken));
-					if (typeof objectifiedValue == "object" && objectifiedValue != null) {
-						stringifiedValue = objectifiedValue.s;
-					} else {
-						stringifiedValue = null;
-					}
-				} else {
-					// Calls to the viverse sdk normally do not resolve instantly, which might cause bugs in the application.
-					// Let's simulate this behavior so it's easier to reproduce these issues in local development.
-					await new Promise((resolve) => setTimeout(resolve, 1000));
-					try {
-						stringifiedValue = localStorage.getItem(localStoragePrefix + key);
-					} catch {
-						stringifiedValue = sessionStorage.get(key);
-					}
-				}
-				if (!stringifiedValue || typeof stringifiedValue != "string") return null;
-				return JSON.parse(stringifiedValue);
-			},
 			showAuthPrompt() {
 				client[props.loginWithWorlds]();
 			},
