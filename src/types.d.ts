@@ -6,6 +6,7 @@ declare global {
 		storage: typeof ViverseStorage;
 		avatar: typeof ViverseAvatarClient;
 	};
+	var ViverseAdSDK: ViverseAdClient;
 }
 
 interface ViverseClientOptions {
@@ -45,6 +46,31 @@ interface ViverseAvatarClientOptions {
 export class ViverseAvatarClient {
 	constructor(options: ViverseAvatarClientOptions);
 	getProfile(): Promise<ViverseProfile>;
+}
+
+interface ViverseAdClientOptions {
+	appId: string;
+}
+
+export interface ShowAdCallbacks {
+	onBreakStart: () => void;
+	onBreakEnd: () => void;
+	onAdError: (error: unknown) => void;
+}
+
+export interface ShowRewardedCallbacks {
+	onBreakStart: () => void;
+	onBreakEnd: () => void;
+	onRewardGranted: () => void;
+	onAdError: (error: unknown) => void;
+}
+
+export class ViverseAdClient {
+	init(options: ViverseAdClientOptions): Promise<void>;
+	showOverlay(options: ShowAdCallbacks): void;
+	showVideo(options: ShowAdCallbacks): void;
+	showRewardOverlay(options: ShowRewardedCallbacks): void;
+	showRewardVideo(options: ShowRewardedCallbacks): void;
 }
 
 export {};

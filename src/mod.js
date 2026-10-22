@@ -30,7 +30,10 @@ export function viversePlugin({
 
 	const props = /** @type {const} */ ({
 		viverse: "viverse",
+		ViverseAdSDK: "ViverseAdSDK",
+		init: "init",
 		client: "client",
+		appId: "appId",
 		clientId: "clientId",
 		domain: "domain",
 		cookieDomain: "cookieDomain",
@@ -43,6 +46,12 @@ export function viversePlugin({
 		avatar: "avatar",
 		baseURL: "baseURL",
 		token: "token",
+		onBreakStart: "onBreakStart",
+		onBreakEnd: "onBreakEnd",
+		onAdError: "onAdError",
+		onRewardGranted: "onRewardGranted",
+		showRewardVideo: "showRewardVideo",
+		showVideo: "showVideo",
 	});
 
 	// @ts-ignore We want to make sure that `props` remains an object.
@@ -57,6 +66,8 @@ export function viversePlugin({
 
 	/** @type {import("./types.d.ts").ViverseClient} */
 	let client;
+	/** @type {import("./types.d.ts").ViverseAdClient?} */
+	let adClient = null;
 	/** @type {import("./types.d.ts").CloudSaveClient} */
 	let cloudSaveClient;
 	/** @type {string?} */
@@ -82,6 +93,98 @@ export function viversePlugin({
 	// We add a prefix to localStorage keys to prevent clashes with manual calls to localStorage.setItem();
 	const localStoragePrefix = "adlad_viverse_";
 
+	/** @type {import("$adlad").AdLadPluginInitializeContext?} */
+	let adladCtx = null;
+
+	/**
+	 * @returns {Promise<import("$adlad").ShowFullScreenAdResult>}
+	 */
+	async function showAd(isRewarded = false) {
+		if (!adladCtx) {
+			return {
+				didShowAd: false,
+				errorReason: "unknown",
+			};
+		}
+		const ctx = adladCtx;
+		if (!adClient) {
+			return {
+				didShowAd: false,
+				errorReason: "not-supported",
+			};
+		}
+		/** @type {(result: import("$adlad").ShowFullScreenAdResult) => void} */
+		let resolvePromise;
+		/** @type {Promise<import("$adlad").ShowFullScreenAdResult>} */
+		const promise = new Promise((resolve) => {
+			resolvePromise = resolve;
+		});
+
+		/**
+		 * @param {unknown} error
+		 * @returns {import("$adlad").ShowFullScreenAdResult}
+		 */
+		function handleError(error) {
+			console.error(error);
+
+			/** @type {import("$adlad").AdErrorReason} */
+			let errorReason = "unknown";
+			if (error instanceof Error) {
+				if (error.message.includes("COOLDOWN_ACTIVE")) {
+					errorReason = "time-constraint";
+				}
+			}
+			return {
+				didShowAd: false,
+				errorReason,
+			};
+		}
+		try {
+			/** @type {import("./types.d.ts").ShowAdCallbacks} */
+			const callbacks = {
+				[props.onBreakStart]: () => {
+					ctx.setNeedsMute(true);
+					ctx.setNeedsPause(true);
+				},
+				[props.onBreakEnd]: () => {
+					ctx.setNeedsMute(false);
+					ctx.setNeedsPause(false);
+					if (!isRewarded) {
+						resolvePromise({
+							didShowAd: true,
+							errorReason: null,
+						});
+					}
+				},
+				[props.onAdError]: (error) => {
+					ctx.setNeedsMute(false);
+					ctx.setNeedsPause(false);
+					resolvePromise(handleError(error));
+				},
+			};
+			if (isRewarded) {
+				/** @type {import("./types.d.ts").ShowRewardedCallbacks} */
+				const rewardCallbacks = {
+					...callbacks,
+					[props.onRewardGranted]: () => {
+						resolvePromise({
+							didShowAd: true,
+							errorReason: null,
+						});
+					},
+				};
+				adClient[props.showRewardVideo](rewardCallbacks);
+			} else {
+				adClient[props.showVideo](callbacks);
+			}
+		} catch (error) {
+			return handleError(error);
+		}
+		return promise;
+	}
+
+	let initializeTime = performance.now();
+
 	const plugin = /** @type {const} @satisfies {import("$adlad").AdLadPlugin} */ ({
 		name: "viverse",
 		async initialize(ctx) {
@@ -89,6 +192,8 @@ export function viversePlugin({
 				throw new Error("Viverse plugin is being initialized more than once");
 			}
 			initializeCalled = true;
+
+			adladCtx = ctx;
 
 			await ctx.loadScriptTag("https://www.viverse.com/static-assets/viverse-sdk/index.umd.cjs");
 
@@ -110,6 +215,39 @@ export function viversePlugin({
 
 			const storageClient = new globalThis[props.viverse][props.storage]();
 			cloudSaveClient = await storageClient[props.newCloudSaveClient](appId);
+
+			try {
+				await ctx.loadScriptTag(
+					"https://www.viverse.com/static-assets/viverse-ad-sdk/0.0.6/viverse-ad-sdk.umd.js",
+				);
+				const ads = globalThis[props.ViverseAdSDK];
+				await ads[props.init]({
+					[props.appId]: appId,
+				});
+				adClient = ads;
+			} catch (error) {
+				ctx.setCanShowFullScreenAd(false);
+				ctx.setCanShowRewardedAd(false);
+				console.error(error);
+			}
+			initializeTime = performance.now();
+		},
+		manualNeedsMute: true,
+		manualNeedsPause: true,
+		async showFullScreenAd() {
+			if (performance.now() - initializeTime < 30_000) {
+				// Viverse doesn't allow us to show ads when the game starts (and in fact, it seems like showing
+				// ads at the start causes the player to get stuck), so we add a timeout of 30 seconds after initialization
+				// to avoid showing ads at the start
+				return {
+					didShowAd: false,
+					errorReason: "time-constraint",
+				};
+			}
+			return await showAd(false);
+		},
+		async showRewardedAd() {
+			return await showAd(true);
 		},
 		async setStorageItem(key, value) {
 			// The Viverse SDK doesn't allow passing raw values such as `true` or `42`,
