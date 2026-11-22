@@ -1,4 +1,21 @@
+import { parseArgs } from "node:util";
+
 export default async function (ctx) {
-	const appId = await ctx.prompt("What is the Viverse app id?");
+	const { values } = parseArgs({
+		options: {
+			appId: {
+				type: "string",
+				short: "a",
+			},
+		},
+		strict: false,
+	});
+
+	let appId = values.appId || "";
+	while (!appId) {
+		appId = await input({
+			message: "What is the Viverse app id?\n",
+		});
+	}
 	ctx.setPluginOptions(`{appId: "${appId}"}`);
 }
